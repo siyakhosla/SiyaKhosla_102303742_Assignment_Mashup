@@ -40,12 +40,11 @@ button {
 <body>
 <div class="container">
 <h2>Mashup Generator</h2>
-<form method="post">
-<input name="singer" placeholder="Singer Name" required>
-<input name="num" placeholder="Number of Videos" required>
-<input name="duration" placeholder="Duration (seconds)" required>
-<input name="email" placeholder="Email ID" required>
-<button type="submit">Generate Mashup</button>
+<form method="post" enctype="multipart/form-data">
+Upload Audio Files: <input type="file" name="files" multiple><br><br>
+Duration (seconds): <input name="duration"><br><br>
+Email ID: <input name="email"><br><br>
+<input type="submit" value="Generate">
 </form>
 </div>
 </body>
@@ -86,21 +85,32 @@ def send_email(receiver):
         smtp.login(sender,password)
         smtp.send_message(msg)
 
-@app.route("/",methods=["GET","POST"])
+@app.route("/", methods=["GET","POST"])
 def home():
-    if request.method=="POST":
-        singer = request.form["singer"]
-        num = int(request.form["num"])
+    if request.method == "POST":
+        files = request.files.getlist("files")
         duration = int(request.form["duration"])
         email = request.form["email"]
 
-        download_audio(singer,num)
-        create_mashup(duration)
-        send_email(email)
+        os.makedirs("uploads", exist_ok=True)
+
+        final = AudioSegment.empty()
+
+        for f in files:
+            path = os.path.join("uploads", f.filename)
+            f.save(path)
+
+            audio = AudioSegment.from_file(path)
+            final += audio[:duration * 1000]
+
+        final.export("output.mp3", format="mp3")
+
+        send_email(email)   # your existing email function
 
         return "Mashup created & emailed successfully!"
 
     return render_template_string(HTML)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
