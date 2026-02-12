@@ -1,7 +1,6 @@
 from flask import Flask, request, render_template_string
 import os, zipfile, smtplib
 from email.message import EmailMessage
-from yt_dlp import YoutubeDL
 from pydub import AudioSegment
 
 app = Flask(__name__)
@@ -51,19 +50,7 @@ Email ID: <input name="email"><br><br>
 </html>
 """
 
-def download_audio(singer, num):
-    os.makedirs("downloads", exist_ok=True)
-    query = f"ytsearch{num}:{singer}"
-    opts = {'format':'bestaudio','outtmpl':'downloads/%(title)s.%(ext)s'}
-    with YoutubeDL(opts) as ydl:
-        ydl.download([query])
 
-def create_mashup(duration):
-    final = AudioSegment.empty()
-    for f in os.listdir("downloads"):
-        audio = AudioSegment.from_file("downloads/"+f)
-        final += audio[:duration*1000]
-    final.export("output.mp3", format="mp3")
 
 def send_email(receiver):
     sender = os.environ.get("EMAIL_USER")
