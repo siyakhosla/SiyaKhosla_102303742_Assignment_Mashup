@@ -1,7 +1,6 @@
-from flask import Flask, request, render_template_string
-import os, zipfile, smtplib
-from email.message import EmailMessage
+from flask import Flask, request, render_template_string, send_file
 from pydub import AudioSegment
+import os
 
 app = Flask(__name__)
 
@@ -40,44 +39,24 @@ button {
 <div class="container">
 <h2>Mashup Generator</h2>
 <form method="post" enctype="multipart/form-data">
-Upload Audio Files: <input type="file" name="files" multiple><br><br>
-Duration (seconds): <input name="duration"><br><br>
-Email ID: <input name="email"><br><br>
-<input type="submit" value="Generate">
+Upload Audio Files:
+<input type="file" name="files" multiple required><br><br>
+
+Duration (seconds):
+<input name="duration" required><br><br>
+
+<button type="submit">Generate Mashup</button>
 </form>
 </div>
 </body>
 </html>
 """
 
-
-
-def send_email(receiver):
-    sender = os.environ.get("EMAIL_USER")
-    password = os.environ.get("EMAIL_PASS")
-
-    with zipfile.ZipFile("mashup.zip","w") as z:
-        z.write("output.mp3")
-
-    msg = EmailMessage()
-    msg["Subject"] = "Your Mashup File"
-    msg["From"] = sender
-    msg["To"] = receiver
-    msg.set_content("Your mashup is attached.")
-
-    with open("mashup.zip","rb") as f:
-        msg.add_attachment(f.read(), maintype="application", subtype="zip", filename="mashup.zip")
-
-    with smtplib.SMTP_SSL("smtp.gmail.com",465) as smtp:
-        smtp.login(sender,password)
-        smtp.send_message(msg)
-
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
         files = request.files.getlist("files")
         duration = int(request.form["duration"])
-        email = request.form["email"]
 
         os.makedirs("uploads", exist_ok=True)
 
@@ -92,13 +71,11 @@ def home():
 
         final.export("output.mp3", format="mp3")
 
-        send_email(email)   # your existing email function
-
-        return "Mashup created & emailed successfully!"
+        return send_file("output.mp3", as_attachment=True)
 
     return render_template_string(HTML)
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
